@@ -34,6 +34,7 @@ RUN cd /tmp/build/nginx/${NGINX_VERSION} && \
         --lock-path=/var/lock/nginx/nginx.lock \
         --http-log-path=/var/log/nginx/access.log \
         --http-client-body-temp-path=/tmp/nginx-client-body \
+        --with-http_secure_link_module \
         --with-http_ssl_module \
         --with-threads \
         --with-ipv6 \

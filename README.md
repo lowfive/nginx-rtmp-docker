@@ -1,10 +1,10 @@
 ## Supported tags and respective `Dockerfile` links
 
-* [`latest` _(Dockerfile)_](https://github.com/tiangolo/nginx-rtmp-docker/blob/master/Dockerfile)
+* [`latest` _(Dockerfile)_](https://github.com/lowfive/nginx-rtmp-docker/blob/master/Dockerfile)
 
 # nginx-rtmp
 
-[**Docker**](https://www.docker.com/) image with [**Nginx**](http://nginx.org/en/) using the [**nginx-rtmp-module**](https://github.com/arut/nginx-rtmp-module) module for live multimedia (video) streaming.
+[**Docker**](https://www.docker.com/) image with [**Nginx**](http://nginx.org/en/) using the [**nginx-rtmp-module**](https://github.com/arut/nginx-rtmp-module) and [**secure_link**](nginx.org/en/docs/http/ngx_http_secure_link_module.html) modules for live multimedia (video) streaming with stream keys.
 
 ## Description
 
@@ -14,7 +14,7 @@ This was inspired by other similar previous images from [dvdgiessen](https://hub
 
 The main purpose (and test case) to build it was to allow streaming from [**OBS Studio**](https://obsproject.com/) to different clients at the same time.
 
-**GitHub repo**: <https://github.com/tiangolo/nginx-rtmp-docker>
+**GitHub repo**: <https://github.com/lowfive/nginx-rtmp-docker>
 
 **Docker Hub image**: <https://hub.docker.com/r/tiangolo/nginx-rtmp/>
 
@@ -26,8 +26,14 @@ The main purpose (and test case) to build it was to allow streaming from [**OBS 
 * For the simplest case, just run a container with this image:
 
 ```bash
-docker run -d -p 1935:1935 --name nginx-rtmp tiangolo/nginx-rtmp
+docker run -d -p 1935:1935 --name nginx-rtmp lowfive/nginx-rtmp
 ```
+
+### Generate stream keys
+```bash
+echo -n "stream/namehere" | openssl dgst -md5 -binary | openssl enc -base64 | tr '+/' '-_' | tr -d '='
+```
+Substitute the desired stream name for ```namehere```. Make sure you don't use spaces.
 
 ## How to test with OBS Studio and VLC
 
@@ -39,8 +45,8 @@ docker run -d -p 1935:1935 --name nginx-rtmp tiangolo/nginx-rtmp
 * Click the "Settings" button
 * Go to the "Stream" section
 * In "Stream Type" select "Custom Streaming Server"
-* In the "URL" enter the `rtmp://<ip_of_host>/live` replacing `<ip_of_host>` with the IP of the host in which the container is running. For example: `rtmp://192.168.0.30/live`
-* In the "Stream key" use a "key" that will be used later in the client URL to display that specific stream. For example: `test`
+* In the "URL" enter the `rtmp://<ip_of_host>/live` replacing `<ip_of_host>` with the IP of the host in which the container is running. For example: `rtmp://192.168.0.30/stream`
+* In the "Stream key" use the desiared stream name along with the "key" value that was generated during the "Generate stream keys" section. For example: `namehere?key=XmVLx2O3wREvzKTH1i53yg`
 * Click the "OK" button
 * In the section "Sources" click de "Add" button (`+`) and select a source (for example "Display Capture") and configure it as you need
 * Click the "Start Streaming" button
@@ -49,7 +55,7 @@ docker run -d -p 1935:1935 --name nginx-rtmp tiangolo/nginx-rtmp
 * Open a [VLC](http://www.videolan.org/vlc/index.html) player (it also works in Raspberry Pi using `omxplayer`)
 * Click in the "Media" menu
 * Click in "Open Network Stream"
-* Enter the URL from above as `rtmp://<ip_of_host>/live/<key>` replacing `<ip_of_host>` with the IP of the host in which the container is running and `<key>` with the key you created in OBS Studio. For example: `rtmp://192.168.0.30/live/test`
+* Enter the URL from above as `rtmp://<ip_of_host>/stream/<streamname>` replacing `<ip_of_host>` with the IP of the host in which the container is running and the stream name you chose. For example: `rtmp://192.168.0.30/stream/namehere`
 * Click "Play"
 * Now VLC should start playing whatever you are transmitting from OBS Studio
 
@@ -66,7 +72,7 @@ docker logs nginx-rtmp
 If you need to modify the configurations you can create a file `nginx.conf` and replace the one in this image using a `Dockerfile` that is based on the image, for example:
 
 ```Dockerfile
-FROM tiangolo/nginx-rtmp
+FROM lowfive/nginx-rtmp
 
 COPY nginx.conf /etc/nginx/nginx.conf
 ```
@@ -77,14 +83,37 @@ The current `nginx.conf` contains:
 worker_processes auto;
 rtmp_auto_push on;
 events {}
+http {
+    server {
+        listen 8080;
+        server_name localhost;
+
+        location /on_publish {
+            secure_link $arg_key;
+            secure_link_md5 $arg_app/$arg_name;
+
+            if ($secure_link = "") {
+                return 501;
+            }
+
+            if ($secure_link = "0") {
+                return 502;
+            }
+            return 200;
+        }
+    }
+}
 rtmp {
     server {
         listen 1935;
-        listen [::]:1935 ipv6only=on;    
+        listen [::]:1935 ipv6only=on;
 
-        application live {
+        notify_method get;
+
+        application stream {
             live on;
             record off;
+            on_publish http://localhost:8080/on_publish;
         }
     }
 }
