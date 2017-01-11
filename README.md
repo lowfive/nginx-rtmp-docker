@@ -16,7 +16,7 @@ The main purpose (and test case) to build it was to allow streaming from [**OBS 
 
 **GitHub repo**: <https://github.com/lowfive/nginx-rtmp-docker>
 
-**Docker Hub image**: <https://hub.docker.com/r/tiangolo/nginx-rtmp/>
+**Docker Hub image**: <https://hub.docker.com/r/lowfive/nginx-rtmp-docker/>
 
 ## Details
 
@@ -26,7 +26,7 @@ The main purpose (and test case) to build it was to allow streaming from [**OBS 
 * For the simplest case, just run a container with this image:
 
 ```bash
-docker run -d -p 1935:1935 --name nginx-rtmp lowfive/nginx-rtmp
+docker run -d -p 1935:1935 --name nginx-rtmp lowfive/nginx-rtmp-docker
 ```
 
 ### Generate stream keys
@@ -46,7 +46,7 @@ Substitute the desired stream name for ```namehere```. Make sure you don't use s
 * Go to the "Stream" section
 * In "Stream Type" select "Custom Streaming Server"
 * In the "URL" enter the `rtmp://<ip_of_host>/live` replacing `<ip_of_host>` with the IP of the host in which the container is running. For example: `rtmp://192.168.0.30/stream`
-* In the "Stream key" use the desiared stream name along with the "key" value that was generated during the "Generate stream keys" section. For example: `namehere?key=XmVLx2O3wREvzKTH1i53yg`
+* In the "Stream key" use the desired stream name along with the "key" value that was generated during the "Generate stream keys" section. For example: `namehere?key=XmVLx2O3wREvzKTH1i53yg`
 * Click the "OK" button
 * In the section "Sources" click de "Add" button (`+`) and select a source (for example "Display Capture") and configure it as you need
 * Click the "Start Streaming" button
